@@ -1,0 +1,37 @@
+---
+title: "Modularbeit: Datenaufbereitung und Visualisiuerng"
+author: ""
+date: "31.05.2026"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+# globale Optionen fuer Code-Chunks 
+knitr::opts_chunk$set(echo = TRUE)
+
+# Pakete laden 
+library(tidyverse)
+library(ggplot2)
+```
+
+# 1. Hypothese und verwendete Datensätze 
+
+```{r example}
+today()
+```
+
+# 2. Datenaufbereitung  
+
+# 3. Überblick Daten 
+
+# 4. Ausreißeranalyse 
+
+# 5. Anonymisierung  
+
+# 6. Info-Grafik   
+
+# Anhang 
+
+```{r sessionInfo}
+sessionInfo()
+```
