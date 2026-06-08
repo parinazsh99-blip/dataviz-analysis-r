@@ -1,6 +1,6 @@
 ---
 title: "Modularbeit: Datenaufbereitung und Visualisiuerng"
-author: ""
+author: "Fatemeh Shafiee"
 date: "31.05.2026"
 output: html_document
 ---
@@ -14,23 +14,237 @@ library(tidyverse)
 library(ggplot2)
 ```
 
-# 1. Hypothese und verwendete Datensätze 
+# 1. Hypothese und verwendete Datensätze
 
-```{r example}
-today()
+## Hypothese:
+
+Der Anteil erneubarer Energien an der Stromerzeugung in Bayern ist höher als der deutsche Durchschnitt und wächst Schneller.
+
+## Datensätze:
+**Datensatz 1:** Energiebilanz Bayern (stmwi.bayern.de) – enthält jährliche Stromerzeugung in GWh von 2000–2024.
+
+**Datensatz 2:** Our World in Data – enthält Anteile der Energieträger in % für Deutschland, EU und Welt.
+
+```{r daten-einlesen}
+library(readxl)
+
+# Bayern (XLSX)
+bayern <- read_excel("data/benötigte_Seite_von_Energiebilanz_BY.xlsx")
+
+# Deutscland (CSV)
+deutschland <- read_csv("data/share-elec-by-source_DE.csv", show_col_types = FALSE)
+
+# EU (CSV)
+eu <- read_csv("data/share-elec-by-source_EU.csv", show_col_types = FALSE)
+
+# Welt (CSV)
+welt <- read_csv("data/share-elec-by-source_Welt.csv", show_col_types = FALSE)
 ```
 
-# 2. Datenaufbereitung  
 
-# 3. Überblick Daten 
+# 2. Datenaufbereitung
+```{r Überblick-Daten}
+glimpse(bayern)
 
-# 4. Ausreißeranalyse 
+glimpse(deutschland)
+```
 
-# 5. Anonymisierung  
+### Variablentypen
+**Bayern:**
+Die Variable `Jahr` ist metrisch, da sie einen kontinuierlichen Zeitwert darstellt. 
+Die Variablen `Kohlen`, `Öl`, `Erdgas`, `Kernenergie`, `Erneubare Energie`, `Hydro`, `Wind`, `Solar` und `Biomasse` sind metrisch, da sie absolute Energiemengen in GWh darstellen. 
+Die berechneten Anteilsvariablen (`Anteil_Erneuerbar` etc.) sind ebenfalls metrisch als Prozentwerte.
 
-# 6. Info-Grafik   
+**Deutschland/EU/Welt:**
+Die Variable `Year` ist metrisch. 
+Die Energieträger-Variablen (`Coal`, `Gas`, `Wind` etc.) sind metrisch als Prozentwerte. 
+Die Variablen `Entity` und `Code` sind kategorial, da sie Ländernamen bzw. Ländercodes enthalten – für unsere Analyse sind diese jedoch nicht relevant, da der Datensatz bereits auf Deutschland gefiltert ist.
 
-# Anhang 
+
+### fehlende Werte prüfen 
+```{r fehlende-Daten-prüfen}
+sum(is.na(bayern))
+sum(is.na(deutschland))
+sum(is.na(eu))
+sum(is.na(welt))
+```
+
+Der EU-Datensatz enthält 4 fehlende Werte in der Variable Wind für die Jahre 2000–2003, da für diesen Zeitraum keine Daten verfügbar waren. Da diese Lücke nur einen kleinen Teil des Analysezeitraums betrifft, werden die fehlenden Werte beibehalten.
+
+
+### Berechnungen
+
+**Bayern:**
+
+Da der Datensatz absolute Werte in GWh enthält, wurden die Anteile der Energieträger berechnet, z.B.:
+
+`Anteil_Erneuerbar = Erneubare Energie / Insgesamt * 100` Dies wurde analog für alle weiteren Energieträger durchgeführt.
+
+
+**Deutschland/EU/Welt:**
+
+Diese Datensätze enthalten bereits Prozentwerte. Der Gesamtanteil erneuerbarer Energien wurde durch Addition der einzelnen erneuerbaren Quellen berechnet: `Anteil_Erneuerbar = Hydropower + Solar + Wind + Other renewables + Bioenergy`
+
+```{r datenaufbereitung}
+# Überblick
+view(bayern)
+
+# Bayern: Anteile berechnen (Rohdaten in GWh) 
+bayern <- bayern |>
+  mutate(
+    Anteil_Kohlen      = Kohlen / Insgesamt * 100,
+    Anteil_Oel         = Öl / Insgesamt * 100,
+    Anteil_Erdgas      = Erdgas / Insgesamt * 100,
+    Anteil_Kernenergie = Kernenergie / Insgesamt * 100,
+    Anteil_Erneuerbar  = `Erneubare Energie` / Insgesamt * 100
+  )
+
+
+# Deutschland: Anteile bereits vorhanden, nur erneubare summieren
+deutschland <- deutschland |>
+  mutate(Anteil_Erneuerbar = Hydropower + Solar + Wind + `Other renewables` + Bioenergy)
+
+
+# EU: gleich wie Deutschland
+eu <- eu |>
+  mutate(Anteil_Erneuerbar = Hydropower + Solar + Wind + `Other renewables` + Bioenergy)
+
+
+# Welt: gleich wie Deutschland
+welt <- welt |>
+  mutate(Anteil_Erneuerbar = Hydropower + Solar + Wind + `Other renewables` + Bioenergy)
+```
+
+Ein weiteres Problem betrifft den Bayern-Datensatz für das Jahr 2024: Die Daten sind vorläufig und noch nicht vollständig erfasst, weshalb die Summe aller Energieträgeranteile nicht 100% ergibt, sondern nur 98.01%. Der fehlende Anteil von ca. 1.99% wird für die Analyse akzeptiert und entsprechend dokumentiert.
+
+```{r weitere-fehlende-Daten}
+# Fehlender Anteil Bayern 2024
+bayern |>
+  filter(Jahr == 2024) |>
+  summarise(
+    Summe = Anteil_Kohlen + Anteil_Oel + Anteil_Erdgas + 
+            Anteil_Kernenergie + Anteil_Erneuerbar,
+    Fehlend = 100 - Summe
+  )
+```
+
+### Ergebnis prüfen
+```{r Ergebnis}
+head(bayern)
+
+head(deutschland)
+```
+
+
+# 3. Überblick Daten
+
+### Numerische Zusammenfassung
+```{r summary-daten}
+summary(bayern)
+
+summary(deutschland)
+```
+
+Um einen besseren Überblick zu erhalten, zeigen die folgenden Grafiken die Entwicklung der Anteile der wichtigsten Energieträger in Bayern und Deutschland von 2000 bis 2024.
+```{r Überblick}
+# Zeitreihe – mehrere Variablen gemeinsam (BY)
+bayern_long <- bayern |>
+  select(Jahr, Anteil_Kohlen, Anteil_Erdgas, Anteil_Kernenergie, Anteil_Erneuerbar) |>
+  pivot_longer(-Jahr, names_to = "Energietraeger", values_to = "Anteil")
+
+ggplot(bayern_long, aes(x = Jahr, y = Anteil, color = Energietraeger)) +
+  geom_line(linewidth = 1) +
+  scale_color_manual(values = c(
+    "Anteil_Erneuerbar"  = "#009000",  
+    "Anteil_Kernenergie" = "#85fff9",  
+    "Anteil_Kohlen"      = "#404040",  
+    "Anteil_Erdgas"      = "#F96C1B" 
+  ),
+  labels = c(
+    "Anteil_Erneuerbar"  = "Erneuerbar",
+    "Anteil_Kernenergie" = "Kernenergie",
+    "Anteil_Kohlen"      = "Kohle",
+    "Anteil_Erdgas"      = "Erdgas"
+  )) +
+  labs(title = "Energiemix Bayern 2000-2024",
+       x = "Jahr", y = "Anteil (%)") +
+  theme_minimal()
+
+
+# Zeitreihe – mehrere Variablen gemeinsam (DE)
+deutschland_long <- deutschland |>
+  select(Year, Coal, Gas, Nuclear, Anteil_Erneuerbar) |>
+  rename(Anteil_Kohlen = Coal,
+    Anteil_Erdgas      = Gas,
+    Anteil_Kernenergie = Nuclear,
+  ) |>
+  pivot_longer(-Year, names_to = "Energietraeger", values_to = "Anteil")
+
+ggplot(deutschland_long, aes(x = Year, y = Anteil, color = Energietraeger)) +
+  geom_line(linewidth = 1) +
+  scale_color_manual(values = c(
+    "Anteil_Erneuerbar"  = "#009000",  
+    "Anteil_Kernenergie" = "#85fff9",  
+    "Anteil_Kohlen"      = "#404040",  
+    "Anteil_Erdgas"      = "#F96C1B"
+    ),
+  labels = c(
+    "Anteil_Erneuerbar"  = "Erneuerbar",
+    "Anteil_Kernenergie" = "Kernenergie",
+    "Anteil_Kohlen"      = "Kohle",
+    "Anteil_Erdgas"      = "Erdgas"
+  )) +
+  labs(title = "Energiemix Deutschland 2000-2024",
+       x = "Jahr", y = "Anteil (%)") +
+  theme_minimal()
+```
+
+Die Grafiken zeigen deutlich, dass sowohl in Bayern als auch in Deutschland der Anteil der Kernenergie im Zeitraum 2000–2024 auf 0% gesunken ist – in Deutschland von rund 30% und in Bayern sogar von rund 60%. Dieser Rückgang ist auf den deutschen Atomausstieg zurückzuführen, der 2023 abgeschlossen wurde. Gleichzeitig ist in beiden Regionen der Anteil erneuerbarer Energien stark gestiegen, was darauf hindeutet, dass die Kernenergie weitgehend durch erneuerbare Quellen ersetzt wurde. Auch der Anteil der Kohle ging in beiden Regionen zurück. Interessant ist dabei, dass der Anteil des Erdgases parallel zum Anstieg der erneuerbaren Energien ebenfalls zugenommen hat – Erdgas diente in dieser Übergangsphase vermutlich als Brückentechnologie, um Schwankungen bei der erneuerbaren Stromerzeugung auszugleichen.
+
+
+# 4. Ausreißeranalyse
+
+```{r boxplot-ausreißer}
+# Beide Datensätze zusammenfügen
+bayern_box <- bayern_long |>
+  mutate(Region = "Bayern")
+
+deutschland_box <- deutschland_long |>
+  rename(Jahr = Year) |>
+  mutate(Region = "Deutschland")
+
+beide_box <- bind_rows(bayern_box, deutschland_box)
+
+beide_box <- beide_box |>
+  mutate(Energietraeger = recode(Energietraeger,
+    "Anteil_Erdgas"      = "Erdgas",
+    "Anteil_Erneuerbar"  = "Erneuerbar",
+    "Anteil_Kernenergie" = "Kernenergie",
+    "Anteil_Kohlen"      = "Kohle"))
+
+# Boxplot 
+ggplot(beide_box, aes(x = Energietraeger, y = Anteil, fill = Energietraeger)) +
+  geom_boxplot() +
+  facet_wrap(~Region) +
+  scale_fill_manual(values = c(
+    "Erneuerbar"  = "#009000",
+    "Kernenergie" = "#85fff9",
+    "Kohle"       = "#404040",
+    "Erdgas"      = "#F96C1B"
+    )) +
+  labs(title = "Ausreißeranalyse: Bayern vs Deutschland",
+       x = "", y = "Anteil (%)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+Der Boxplot bestätigt den bereits beobachteten Trend: Die Kernenergie weist in Bayern die größte Streuung auf – von rund 60% bis 0% – was den vollständigen Ersatz durch erneuerbare Energien widerspiegelt. In Bayern lag der Anteil erneuerbarer Energien in 50% der Jahre zwischen ca. 20% und 48%, in Deutschland zwischen ca. 10% und 35%. Insgesamt sind keine problematischen Ausreißer erkennbar.
+
+# 5. Anonymisierung
+
+# 6. Info-Grafik
+
+# Anhang
 
 ```{r sessionInfo}
 sessionInfo()
