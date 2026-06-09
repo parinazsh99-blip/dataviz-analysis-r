@@ -204,6 +204,7 @@ Die Grafiken zeigen deutlich, dass sowohl in Bayern als auch in Deutschland der 
 
 # 4. Ausreißeranalyse
 
+### Box-Plot
 ```{r boxplot-ausreißer}
 # Beide Datensätze zusammenfügen
 bayern_box <- bayern_long |>
@@ -242,7 +243,84 @@ Der Boxplot bestätigt den bereits beobachteten Trend: Die Kernenergie weist in 
 
 # 5. Anonymisierung
 
+### Beispiel
+Die verwendeten Datensätze enthalten keine personenbezogenen Daten, da es sich um aggregierte Energiestatistiken auf Länder- bzw. Regionalebene handelt. Anonymisierung ist daher nicht erforderlich.
+Als Beispiel könnte man sich einen Datensatz vorstellen, bei dem einzelne Energieunternehmen ihre vorhergesagte Stromerzeugung je Energieträger melden. Dort wären Variablen wie Unternehmensname oder Standort kritisch, da sie Rückschlüsse auf die Geschäftsstrategie und Wettbewerbsposition einzelner Unternehmen erlauben könnten. Ein möglicher Lösungsansatz wäre die Aggregation der Daten auf regionaler Ebene, sodass keine Rückschlüsse auf einzelne Unternehmen möglich sind."
+
 # 6. Info-Grafik
+
+### Überprüfung der Hypothese: Ist Bayern wirklich Vorreiter der Energiewende?
+Die folgende Info-Grafik überprüft die Hypothese, ob der Anteil erneuerbarer Energien in Bayern höher ist als der deutsche Durchschnitt und schneller wächst. Zusätzlich wird Bayern mit dem EU- und Weltdurchschnitt verglichen, um einzuordnen, ob Bayern nicht nur im nationalen, sondern auch im internationalen Kontext eine Vorreiterrolle einnimmt.
+
+```{r zusammenfügen}
+# Alle Regionen zusammenfügen
+alle_regionen <- bayern |>
+  select(Jahr, Anteil_Erneuerbar) |>
+  mutate(Region = "Bayern") |>
+  bind_rows(
+    deutschland |> 
+      select(Year, Anteil_Erneuerbar) |>
+      rename(Jahr = Year) |>
+      mutate(Region = "Deutschland"),
+    eu |> 
+      select(Year, Anteil_Erneuerbar) |>
+      rename(Jahr = Year) |>
+      mutate(Region = "EU"),
+    welt |> 
+      select(Year, Anteil_Erneuerbar) |>
+      rename(Jahr = Year) |>
+      mutate(Region = "Welt")
+  )
+```
+
+### Zeitreihe alle 4 Regionen
+```{r zeitreihe-Analyse}
+ggplot(alle_regionen, aes(x = Jahr, y = Anteil_Erneuerbar, color = Region)) +
+  geom_line(linewidth = 1.1) +
+  scale_color_manual(values = c(
+    "Bayern"      = "#009000",
+    "Deutschland" = "#0000FF",
+    "EU"          = "#FFD700",
+    "Welt"        = "#FF6600"
+  )) +
+  labs(title = "Anteil erneuerbarer Energien 2000–2024",
+       x = "Jahr", y = "Anteil (%)") +
+  theme_minimal()
+```
+
+Text...
+
+###  Wachstum Bayern vs Deutschland
+Um zu überprüfen, ob Bayern nicht nur einen höheren Anteil erneuerbarer Energien aufweist, sondern auch schneller wächst als der deutsche Durchschnitt, wird im Folgenden eine lineare Regression durchgeführt. Die Steigung der Regressionsgeraden gibt dabei an, um wie viele Prozentpunkte der Anteil erneuerbarer Energien pro Jahr durchschnittlich gestiegen ist. Eine höhere Steigung bedeutet ein schnelleres Wachstum.
+
+```{r Regression-Modell}
+ggplot() +
+  geom_point(data = bayern,
+             aes(x = Jahr, y = Anteil_Erneuerbar,
+                 color = "Bayern"), alpha = 0.5) +
+  geom_smooth(data = bayern,
+              aes(x = Jahr, y = Anteil_Erneuerbar,
+                  color = "Bayern"),
+              method = "lm", se = FALSE) +
+  geom_point(data = deutschland,
+             aes(x = Year, y = Anteil_Erneuerbar,
+                 color = "Deutschland"), alpha = 0.5) +
+  geom_smooth(data = deutschland,
+              aes(x = Year, y = Anteil_Erneuerbar,
+                  color = "Deutschland"),
+              method = "lm", se = FALSE) +
+  scale_color_manual(values = c(
+    "Bayern"      = "#009000",
+    "Deutschland" = "#0000FF"
+  )) +
+  labs(title = "Wachstumsgeschwindigkeit: Bayern vs Deutschland",
+       subtitle = "Lineare Regression 2000–2024",
+       x = "Jahr", y = "Anteil (%)") +
+  theme_minimal()
+```
+
+Text...
+
 
 # Anhang
 
