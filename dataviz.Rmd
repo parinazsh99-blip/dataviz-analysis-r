@@ -284,10 +284,10 @@ alle_regionen <- bayern |>
 ggplot(alle_regionen, aes(x = Jahr, y = Anteil_Erneuerbar, color = Region)) +
   geom_line(linewidth = 1.1) +
   scale_color_manual(values = c(
-    "Bayern"      = "#009000",
+    "Bayern"      = "#0098D4",
     "Deutschland" = "#000000",
     "EU"          = "#0000FF",
-    "Welt"        = "#FF6600"
+    "Welt"        = "#D31A38"
   )) +
   labs(title = "Anteil erneuerbarer Energien 2000–2024",
        x = "Jahr", y = "Anteil (%)") +
@@ -315,10 +315,10 @@ ggplot(alle_regionen, aes(x = Jahr, y = Anteil_Erneuerbar, color = Region)) +
   geom_smooth(method = "lm", se = FALSE) +
   scale_color_manual(name = "Region", 
                      values = c(
-                       "Bayern"      = "#009000",
+                       "Bayern"      = "#0098D4",
                        "Deutschland" = "#000000",
                        "EU"          = "#0000FF",
-                       "Welt"        = "#FF6600"
+                       "Welt"        = "#D31A38"
                      )) +
   labs(title = "Wachstumsgeschwindigkeit: Alle Regionen",
        subtitle = "Lineare Regression 2000–2024",
