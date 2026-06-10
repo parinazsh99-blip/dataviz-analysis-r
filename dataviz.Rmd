@@ -43,6 +43,7 @@ welt <- read_csv("data/share-elec-by-source_Welt.csv", show_col_types = FALSE)
 
 
 # 2. Datenaufbereitung
+
 ```{r Überblick-Daten}
 glimpse(bayern)
 
@@ -61,7 +62,8 @@ Die Energieträger-Variablen (`Coal`, `Gas`, `Wind` etc.) sind metrisch als Proz
 Die Variablen `Entity` und `Code` sind kategorial, da sie Ländernamen bzw. Ländercodes enthalten – für unsere Analyse sind diese jedoch nicht relevant, da der Datensatz bereits auf Deutschland gefiltert ist.
 
 
-### fehlende Werte prüfen 
+### fehlende Werte prüfen
+
 ```{r fehlende-Daten-prüfen}
 sum(is.na(bayern))
 sum(is.na(deutschland))
@@ -239,7 +241,7 @@ ggplot(beide_box, aes(x = Energietraeger, y = Anteil, fill = Energietraeger)) +
   theme(legend.position = "none")
 ```
 
-Der Boxplot bestätigt den bereits beobachteten Trend: Die Kernenergie weist in Bayern die größte Streuung auf – von rund 60% bis 0% – was den vollständigen Ersatz durch erneuerbare Energien widerspiegelt. In Bayern lag der Anteil erneuerbarer Energien in 50% der Jahre zwischen ca. 20% und 48%, in Deutschland zwischen ca. 10% und 35%. Insgesamt sind keine problematischen Ausreißer erkennbar.
+Der Boxplot bestätigt den bereits beobachteten Trend: Die Kernenergie weist in Bayern die größte Streuung auf – von rund 60% bis 0% – was den vollständigen Ersatz durch erneuerbare Energien widerspiegelt. In Bayern lag der Anteil erneuerbarer Energien in 50% der Jahre zwischen ca. 20% und 48%, in Deutschland zwischen ca. 12% und 35%. Insgesamt sind keine problematischen Ausreißer erkennbar.
 
 # 5. Anonymisierung
 
@@ -274,13 +276,17 @@ alle_regionen <- bayern |>
 ```
 
 ### Zeitreihe alle 4 Regionen
+- **x-Achse:** `Jahr` -> metrisch
+- **y-Achse:** `Anteil_Erneuerbar` -> metrisch
+- **Farbe:** `Region` -> kategorial
+
 ```{r zeitreihe-Analyse}
 ggplot(alle_regionen, aes(x = Jahr, y = Anteil_Erneuerbar, color = Region)) +
   geom_line(linewidth = 1.1) +
   scale_color_manual(values = c(
     "Bayern"      = "#009000",
-    "Deutschland" = "#0000FF",
-    "EU"          = "#FFD700",
+    "Deutschland" = "#000000",
+    "EU"          = "#0000FF",
     "Welt"        = "#FF6600"
   )) +
   labs(title = "Anteil erneuerbarer Energien 2000–2024",
@@ -288,38 +294,43 @@ ggplot(alle_regionen, aes(x = Jahr, y = Anteil_Erneuerbar, color = Region)) +
   theme_minimal()
 ```
 
-Text...
+Die folgende Grafik zeigt eine multivariate Zeitreihe des Anteils erneuerbarer Energien für Bayern, Deutschland, EU und Welt von 2000 bis 2024.
+Alle Regionen weisen einen positiven Trend auf – der Anteil erneuerbarer Energien ist weltweit gestiegen. Bayern hat dabei seit 2000 kontinuierlich den höchsten Anteil – sowohl im Vergleich zu Deutschland als auch zur EU und dem Weltdurchschnitt. Im Jahr 2024 erreichte Bayern 75.5%, während Deutschland bei 58.6%, die EU bei ca. 42% und die Welt bei ca. 30% lagen.
+In den ersten Jahren (2000–2005) war der Anteil erneuerbarer Energien in Bayern nahezu konstant, während Deutschland in dieser Zeit bereits einen leichten Anstieg von ca. 6% auf 10% zeigte.
+Bemerkenswert ist ein Knick im Jahr 2021, der sowohl in Bayern als auch in Deutschland sichtbar ist. Dies ist vermutlich auf die Nachwirkungen der COVID-19-Pandemie zurückzuführen: Der wirtschaftliche Aufschwung nach dem Lockdown führte zu einem erhöhten Stromverbrauch, wodurch auch fossile Energieträger wie Kohle wieder stärker eingesetzt wurden und der relative Anteil erneuerbarer Energien für einen kurzen Zeitraum sank.
 
-###  Wachstum Bayern vs Deutschland
+
+###  Wachstumsgeschwindigkeit
+
 Um zu überprüfen, ob Bayern nicht nur einen höheren Anteil erneuerbarer Energien aufweist, sondern auch schneller wächst als der deutsche Durchschnitt, wird im Folgenden eine lineare Regression durchgeführt. Die Steigung der Regressionsgeraden gibt dabei an, um wie viele Prozentpunkte der Anteil erneuerbarer Energien pro Jahr durchschnittlich gestiegen ist. Eine höhere Steigung bedeutet ein schnelleres Wachstum.
 
+- **x-Achse:** `Jahr` -> metrisch
+- **y-Achse:** `Anteil_Erneuerbar` -> metrisch
+- **Farbe:** `Region` -> kategorial
+- **Steigung:** Wachstumsrate pro Jahr -> metrisch
+
 ```{r Regression-Modell}
-ggplot() +
-  geom_point(data = bayern,
-             aes(x = Jahr, y = Anteil_Erneuerbar,
-                 color = "Bayern"), alpha = 0.5) +
-  geom_smooth(data = bayern,
-              aes(x = Jahr, y = Anteil_Erneuerbar,
-                  color = "Bayern"),
-              method = "lm", se = FALSE) +
-  geom_point(data = deutschland,
-             aes(x = Year, y = Anteil_Erneuerbar,
-                 color = "Deutschland"), alpha = 0.5) +
-  geom_smooth(data = deutschland,
-              aes(x = Year, y = Anteil_Erneuerbar,
-                  color = "Deutschland"),
-              method = "lm", se = FALSE) +
-  scale_color_manual(values = c(
-    "Bayern"      = "#009000",
-    "Deutschland" = "#0000FF"
-  )) +
-  labs(title = "Wachstumsgeschwindigkeit: Bayern vs Deutschland",
+ggplot(alle_regionen, aes(x = Jahr, y = Anteil_Erneuerbar, color = Region)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE) +
+  scale_color_manual(name = "Region", 
+                     values = c(
+                       "Bayern"      = "#009000",
+                       "Deutschland" = "#000000",
+                       "EU"          = "#0000FF",
+                       "Welt"        = "#FF6600"
+                     )) +
+  labs(title = "Wachstumsgeschwindigkeit: Alle Regionen",
        subtitle = "Lineare Regression 2000–2024",
        x = "Jahr", y = "Anteil (%)") +
   theme_minimal()
 ```
 
-Text...
+- **Bayern und Deutschland** wachsen ähnlich schnell (parallele Linien)
+- Bayern liegt jedoch **konstant höher** als Deutschland
+- Bayern hat **mehr** erneuerbare Energien, wächst aber nicht unbedingt **schneller**
+
+**Report:** Die Regressionsanalyse zeigt, dass Bayern konstant einen höheren Anteil erneuerbarer Energien aufweist als Deutschland, die EU und die Welt – der erste Teil der Hypothese wird damit bestätigt. Hinsichtlich der Wachstumsgeschwindigkeit zeigen Bayern und Deutschland jedoch nahezu parallele Regressionsgeraden, was auf ein ähnliches Wachstumstempo hindeutet. Beide wachsen jedoch deutlich schneller als der EU- und Weltdurchschnitt.
 
 
 # Anhang
