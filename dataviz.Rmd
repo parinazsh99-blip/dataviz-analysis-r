@@ -1,5 +1,5 @@
 ---
-title: "Modularbeit: Datenaufbereitung und Visualisiuerng"
+title: "Modularbeit: Datenaufbereitung und Visualisierung"
 author: "Fatemeh Shafiee"
 date: "31.05.2026"
 output: html_document
@@ -88,9 +88,6 @@ Da der Datensatz absolute Werte in GWh enthält, wurden die Anteile der Energiet
 Diese Datensätze enthalten bereits Prozentwerte. Der Gesamtanteil erneuerbarer Energien wurde durch Addition der einzelnen erneuerbaren Quellen berechnet: `Anteil_Erneuerbar = Hydropower + Solar + Wind + Other renewables + Bioenergy`
 
 ```{r datenaufbereitung}
-# Überblick
-view(bayern)
-
 # Bayern: Anteile berechnen (Rohdaten in GWh) 
 bayern <- bayern |>
   mutate(
@@ -115,6 +112,12 @@ eu <- eu |>
 # Welt: gleich wie Deutschland
 welt <- welt |>
   mutate(Anteil_Erneuerbar = Hydropower + Solar + Wind + `Other renewables` + Bioenergy)
+
+# Überblick
+# View(bayern)
+# View(deutschland)
+# View(eu)
+# View(welt)
 ```
 
 Ein weiteres Problem betrifft den Bayern-Datensatz für das Jahr 2024: Die Daten sind vorläufig und noch nicht vollständig erfasst, weshalb die Summe aller Energieträgeranteile nicht 100% ergibt, sondern nur 98.01%. Der fehlende Anteil von ca. 1.99% wird für die Analyse akzeptiert und entsprechend dokumentiert.
@@ -128,6 +131,13 @@ bayern |>
             Anteil_Kernenergie + Anteil_Erneuerbar,
     Fehlend = 100 - Summe
   )
+```
+
+OPTIONAL:oder so
+```{r weitere-fehlende-Daten}
+bayern |>
+  filter(Jahr == 2024) |>
+  summarise (Fehlend = 100 - (Anteil_Kohlen + Anteil_Oel + Anteil_Erdgas + Anteil_Kernenergie + Anteil_Erneuerbar))
 ```
 
 ### Ergebnis prüfen
@@ -243,6 +253,12 @@ ggplot(beide_box, aes(x = Energietraeger, y = Anteil, fill = Energietraeger)) +
 
 Der Boxplot bestätigt den bereits beobachteten Trend: Die Kernenergie weist in Bayern die größte Streuung auf – von rund 60% bis 0% – was den vollständigen Ersatz durch erneuerbare Energien widerspiegelt. In Bayern lag der Anteil erneuerbarer Energien in 50% der Jahre zwischen ca. 20% und 48%, in Deutschland zwischen ca. 12% und 35%. Insgesamt sind keine problematischen Ausreißer erkennbar.
 
+**Warum sind Ausreißer problematisch?**
+Extreme Beobachtungen können statistische Kennzahlen wie Mittelwert und Standardabweichung stark verzerren. Besonders bei linearen Regressionen können einzelne Ausreißer die Steigung der Geraden beeinflussen und damit zu falschen Schlussfolgerungen führen.
+
+**Handling**
+Ein gängiger Ansatz ist die IQR-Regel: Werte die mehr als 1.5 × IQR unter dem 1. Quartil oder über dem 3. Quartil liegen, gelten als Ausreißer. Diese können dann entweder entfernt oder durch den Grenzwert ersetzt werden. Wie gesagt in meinem Datensatz sind jedoch keine problematischen Ausreißer erkennbar — die Verteilungen bei der Kernenergie in Bayern spiegeln den realen Atomausstieg wider und sind daher inhaltlich erklärbar, nicht statistisch auffällig.
+
 # 5. Anonymisierung
 
 ### Beispiel
@@ -280,7 +296,7 @@ alle_regionen <- bayern |>
 - **y-Achse:** `Anteil_Erneuerbar` -> metrisch
 - **Farbe:** `Region` -> kategorial
 
-```{r zeitreihe-Analyse}
+```{r zeitreihen-Darstellung}
 ggplot(alle_regionen, aes(x = Jahr, y = Anteil_Erneuerbar, color = Region)) +
   geom_line(linewidth = 1.1) +
   scale_color_manual(values = c(
