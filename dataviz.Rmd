@@ -461,7 +461,7 @@ Ein gängiger Ansatz ist die IQR-Regel: Werte die mehr als 1.5 × IQR unter dem 
 
 ### Beispiel
 Die verwendeten Datensätze enthalten keine personenbezogenen Daten, da es sich um aggregierte Energiestatistiken auf Länder- bzw. Regionalebene handelt. Anonymisierung ist daher nicht erforderlich.
-Als Beispiel könnte man sich einen Datensatz vorstellen, bei dem einzelne Energieunternehmen ihre vorhergesagte Stromerzeugung je Energieträger melden. Dort wären Variablen wie Unternehmensname oder Standort kritisch, da sie Rückschlüsse auf die Geschäftsstrategie und Wettbewerbsposition einzelner Unternehmen erlauben könnten. Ein möglicher Lösungsansatz wäre die Aggregation der Daten auf regionaler Ebene, sodass keine Rückschlüsse auf einzelne Unternehmen möglich sind."
+Als Beispiel könnte man sich einen Datensatz vorstellen, bei dem einzelne Energieunternehmen ihre vorhergesagte Stromerzeugung je Energieträger melden. Dort wären Variablen wie Unternehmensname oder Standort kritisch, da sie Rückschlüsse auf die Geschäftsstrategie und Wettbewerbsposition einzelner Unternehmen erlauben könnten. Ein möglicher Lösungsansatz wäre die Aggregation der Daten auf regionaler Ebene, sodass keine Rückschlüsse auf einzelne Unternehmen möglich sind.
 
 # 6. Info-Grafik
 
