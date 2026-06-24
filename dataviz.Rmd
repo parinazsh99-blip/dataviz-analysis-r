@@ -12,6 +12,8 @@ knitr::opts_chunk$set(echo = TRUE)
 # Pakete laden 
 library(tidyverse)
 library(ggplot2)
+library(readxl)
+library(ggpattern)
 ```
 
 # 1. Hypothese und verwendete Datensätze
@@ -26,8 +28,6 @@ Der Anteil erneubarer Energien an der Stromerzeugung in Bayern ist höher als de
 **Datensatz 2:** Our World in Data – enthält Anteile der Energieträger in % für Deutschland, EU und Welt.
 
 ```{r daten-einlesen}
-library(readxl)
-
 # Bayern (XLSX)
 bayern <- read_excel("data/benötigte_Seite_von_Energiebilanz_BY.xlsx")
 
@@ -133,13 +133,6 @@ bayern |>
   )
 ```
 
-OPTIONAL:oder so
-```{r weitere-fehlende-Daten}
-bayern |>
-  filter(Jahr == 2024) |>
-  summarise (Fehlend = 100 - (Anteil_Kohlen + Anteil_Oel + Anteil_Erdgas + Anteil_Kernenergie + Anteil_Erneuerbar))
-```
-
 ### Ergebnis prüfen
 ```{r Ergebnis}
 head(bayern)
@@ -157,26 +150,253 @@ summary(bayern)
 summary(deutschland)
 ```
 
-Um einen besseren Überblick zu erhalten, zeigen die folgenden Grafiken die Entwicklung der Anteile der wichtigsten Energieträger in Bayern und Deutschland von 2000 bis 2024.
-```{r Überblick}
-# Zeitreihe – mehrere Variablen gemeinsam (BY)
-bayern_long <- bayern |>
-  select(Jahr, Anteil_Kohlen, Anteil_Erdgas, Anteil_Kernenergie, Anteil_Erneuerbar) |>
+### Gesamtüberblick: Energiemix nach einzelnen Quellen
+
+Die folgende Grafik zeigt zunächst den vollständigen Energiemix mit allen einzelnen Energieträgern (Kohle, Öl, Erdgas, Kernenergie, Wasser, Wind, Solar, Bioenergie), um einen detaillierten Gesamtüberblick über die Stromerzeugung zu erhalten.
+
+```{r Alle-Energietraeger-BY}
+bayern <- bayern |>
+  mutate(
+    Anteil_Hydro      = Hydro / Insgesamt * 100,
+    Anteil_Wind       = Wind / Insgesamt * 100,
+    Anteil_Solar      = Solar / Insgesamt * 100,
+    Anteil_Biomasse   = Biomasse / Insgesamt * 100
+  )
+
+bayern_long_alle <- bayern |>
+  select(Jahr, Anteil_Kohlen, Anteil_Oel, Anteil_Erdgas, Anteil_Kernenergie,
+         Anteil_Hydro, Anteil_Wind, Anteil_Solar, Anteil_Biomasse) |>
+  rename(
+    Kohle       = Anteil_Kohlen,
+    Oel         = Anteil_Oel,
+    Erdgas      = Anteil_Erdgas,
+    Kernenergie = Anteil_Kernenergie,
+    Wasser      = Anteil_Hydro,
+    Wind        = Anteil_Wind,
+    Solar       = Anteil_Solar,
+    Bioenergie  = Anteil_Biomasse
+  ) |>
   pivot_longer(-Jahr, names_to = "Energietraeger", values_to = "Anteil")
 
-ggplot(bayern_long, aes(x = Jahr, y = Anteil, color = Energietraeger)) +
-  geom_line(linewidth = 1) +
-  scale_color_manual(values = c(
-    "Anteil_Erneuerbar"  = "#009000",  
-    "Anteil_Kernenergie" = "#85fff9",  
-    "Anteil_Kohlen"      = "#404040",  
-    "Anteil_Erdgas"      = "#F96C1B" 
-  ),
-  labels = c(
+ggplot(bayern_long_alle, aes(x = Jahr, y = Anteil, fill = Energietraeger)) +
+  geom_area(alpha = 0.6) +
+  scale_fill_manual(values = c(
+    "Kohle"       = "#404040",
+    "Oel"         = "#8B4513",
+    "Erdgas"      = "#F96C1B",
+    "Kernenergie" = "#85fff9",
+    "Wasser"      = "#9ED7E6",
+    "Wind"        = "#006884",
+    "Solar"       = "#FFD700",
+    "Bioenergie"  = "#6B8E23"
+  )) +
+  labs(title = "Energiemix Bayern 2000–2024 (alle Quellen)",
+       x = "Jahr", y = "Anteil (%)", fill = "Energieträger") +
+  theme_minimal()
+```
+
+Zum Vergleich zeigt die folgende Grafik den gleichen detaillierten Energiemix für Deutschland insgesamt.
+
+```{r Alle-Energietraeger-DE}
+deutschland_long_alle <- deutschland |>
+  select(Year, Coal, Oil, Gas, Nuclear, Hydropower, Wind, Solar, Bioenergy) |>
+  rename(Jahr = Year,
+    Kohle      = Coal,
+    Oel         = Oil,
+    Erdgas      = Gas,
+    Kernenergie = Nuclear,
+    Wasser      = Hydropower,
+    Wind        = Wind,
+    Solar       = Solar,
+    Bioenergie  = Bioenergy
+  ) |>
+  pivot_longer(-Jahr, names_to = "Energietraeger", values_to = "Anteil")
+
+ggplot(deutschland_long_alle, aes(x = Jahr, y = Anteil, fill = Energietraeger)) +
+  geom_area(alpha = 0.6) +
+  scale_fill_manual(values = c(
+    "Kohle"       = "#404040",
+    "Oel"         = "#8B4513",
+    "Erdgas"      = "#F96C1B",
+    "Kernenergie" = "#85fff9",
+    "Wasser"      = "#9ED7E6",
+    "Wind"        = "#006884",
+    "Solar"       = "#FFD700",
+    "Bioenergie"  = "#6B8E23"
+  )) +
+  labs(title = "Energiemix Deutschland 2000–2024 (alle Quellen)",
+       x = "Jahr", y = "Anteil (%)", fill = "Energieträger") +
+  theme_minimal()
+```
+
+### Vereinfachter Energiemix: Fokus auf vier Hauptkategorien
+Für die weitere Analyse werden die acht einzelnen Energieträger zu vier Hauptkategorien zusammengefasst: Kohle, Erdgas, Kernenergie und Erneuerbar (als Summe aus Wasser, Wind, Solar und Bioenergie). Diese Vereinfachung konzentriert sich auf die für die Hypothese relevante Unterscheidung und macht den Vergleich zwischen Bayern und Deutschland übersichtlicher.
+
+Die folgende Darstellung zeigt die Entwicklung der vier Hauptenergieträger in Bayern und Deutschland einzeln über den Zeitraum 2000–2024. Jeder Energieträger wird separat betrachtet, um Trends klarer sichtbar zu machen.
+
+```{r Flächen-diagramm-BY}
+bayern_long <- bayern |>
+  select(Jahr, Anteil_Kohlen, Anteil_Erdgas, Anteil_Kernenergie, Anteil_Erneuerbar) |>
+  pivot_longer(-Jahr, names_to = "Energietraeger", values_to = "Anteil") |>
+  mutate(Energietraeger = recode(Energietraeger,
     "Anteil_Erneuerbar"  = "Erneuerbar",
     "Anteil_Kernenergie" = "Kernenergie",
     "Anteil_Kohlen"      = "Kohle",
-    "Anteil_Erdgas"      = "Erdgas"
+    "Anteil_Erdgas"      = "Erdgas"))
+
+ggplot(bayern_long, aes(x = Jahr, y = Anteil, fill = Energietraeger)) +
+  geom_area(alpha = 0.6) +
+  facet_wrap(~Energietraeger, scales = "fixed") +
+  scale_x_continuous(breaks = seq(2000, 2024, by = 5)) +
+  scale_fill_manual(values = c(
+    "Erneuerbar"  = "#009000",
+    "Kernenergie" = "#85fff9",
+    "Kohle"       = "#404040",
+    "Erdgas"      = "#F96C1B"
+  )) +
+  labs(title = "Bayern: Entwicklung der Energieträger 2000–2024",
+     x = "Jahr", y = "Anteil (%)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+```{r Flächen-diagramm-DE}
+deutschland_long <- deutschland |>
+  select(Year, Coal, Gas, Nuclear, Anteil_Erneuerbar) |>
+  rename(Jahr = Year,
+    Kohle = Coal,
+    Erdgas      = Gas,
+    Kernenergie = Nuclear,
+    Erneuerbar = Anteil_Erneuerbar) |>
+  pivot_longer(-Jahr, names_to = "Energietraeger", values_to = "Anteil")
+
+
+ggplot(deutschland_long, aes(x = Jahr, y = Anteil, fill = Energietraeger)) +
+   geom_area(alpha = 0.6) +
+  facet_wrap(~Energietraeger, scales = "fixed") +
+  scale_x_continuous(breaks = seq(2000, 2024, by = 5)) +
+  scale_fill_manual(values = c(
+    "Erneuerbar"  = "#009000",
+    "Kernenergie" = "#85fff9",
+    "Kohle"       = "#404040",
+    "Erdgas"      = "#F96C1B"
+  )) +
+  labs(title = "Deutschland: Entwicklung der Energieträger 2000–2024",
+     x = "Jahr", y = "Anteil (%)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+Wie die Gesamtübersicht bereits zeigt, haben erneuerbare Energien in beiden Regionen die Kernenergie nahezu vollständig ersetzt. Kohle ist ebenfalls 
+rückläufig — in Bayern war der Anteil bereits 2000 sehr gering und istheute vernachlässigbar. Erdgas hingegen ist leicht gestiegen, was darauf 
+hindeutet, dass es als schnell verfügbare Übergangslösung genutzt wurde, um die wegfallende Kernenergie kurzfristig auszugleichen, bis erneuerbare 
+Energien weiter ausgebaut werden konnten.
+
+
+### Direkter Vergleich: Energiemix Bayern 2000 vs. 2024
+
+Der folgende Vergleich zeigt für jeden Energieträger den Anteil im Jahr 2000 (hell) und 2024 (dunkel). Besonders auffällig ist der starke Anstieg der erneuerbaren Energien und der vollständige Wegfall der Kernenergie durch den Atomausstieg 2023.
+
+```{r Balken-diagramm-BY}
+bayern_vergleich <- bayern_long |>
+  filter(Jahr %in% c(2000, 2024)) |>
+  mutate(Jahr = factor(Jahr), Gruppe = paste(Energietraeger, Jahr))
+
+ggplot(bayern_vergleich, aes(x = Energietraeger, y = Anteil, fill = Gruppe)) +
+  geom_col(position = "dodge", width = 0.7) +
+  geom_text(aes(label = Jahr), position = position_dodge(width = 0.7), 
+            vjust = -0.3, size = 3) +
+  scale_fill_manual(values = c(
+    "Erneuerbar 2000"   = "#A8E6A1", "Erneuerbar 2024"   = "#009000",
+    "Kernenergie 2000"  = "#C9F5F9", "Kernenergie 2024"  = "#85fff9",
+    "Kohle 2000"        = "#9F9F9F", "Kohle 2024"        = "#404040",
+    "Erdgas 2000"       = "#FCC9A3", "Erdgas 2024"       = "#F96C1B"
+  )) +
+  labs(title = "Bayern: Energiemix 2000 vs. 2024 im Vergleich",
+       x = "", y = "Anteil (%)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+Zum Vergleich die gleiche Darstellung für Deutschland:
+
+```{r Balken-diagramm-DE}
+deutschland_vergleich <- deutschland_long |>
+  filter(Jahr %in% c(2000, 2024)) |>
+  mutate(Jahr = factor(Jahr), Gruppe = paste(Energietraeger, Jahr))
+
+ggplot(deutschland_vergleich, aes(x = Energietraeger, y = Anteil, fill = Gruppe)) +
+  geom_col(position = "dodge", width = 0.7) +
+  geom_text(aes(label = Jahr), position = position_dodge(width = 0.7), 
+            vjust = -0.3, size = 3) +
+  scale_fill_manual(values = c(
+    "Erneuerbar 2000"   = "#A8E6A1", "Erneuerbar 2024"   = "#009000",
+    "Kernenergie 2000"  = "#C9F5F9", "Kernenergie 2024"  = "#85fff9",
+    "Kohle 2000"        = "#9F9F9F", "Kohle 2024"        = "#404040",
+    "Erdgas 2000"       = "#FCC9A3", "Erdgas 2024"       = "#F96C1B"
+  )) +
+  labs(title = "Deutschland: Energiemix 2000 vs. 2024 im Vergleich",
+       x = "", y = "Anteil (%)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+Der Vergleich zeigt deutlich: Bayern erreicht 2024 mit ~75% erneuerbarer Energien einen deutlich höheren Anteil als Deutschland mit ~59%. Beide Regionen starteten im Jahr 2000 auf niedrigem Niveau — Bayern bei ~19% und Deutschland bei ~6% — und haben seitdem einen starken Ausbau der Erneuerbaren verzeichnet.
+
+
+### Energiemix 2024 im direkten Vergleich: Bayern vs. Deutschland
+
+Die folgende Grafik zeigt den aktuellen Energiemix 2024 für Bayern und Deutschland direkt nebeneinander — aufgeteilt nach den vier Hauptenergieträgern.
+
+```{r}
+vergleich_2024 <- bind_rows(
+  bayern_long |> 
+    filter(Jahr == 2024) |>
+    mutate(Region = "Bayern"),
+  
+  deutschland_long |> 
+    filter(Jahr == 2024) |>
+    mutate(Region = "Deutschland"))
+
+
+ggplot(vergleich_2024, aes(x = Region, y = Anteil, fill = Energietraeger, pattern = Region)) +
+ geom_col_pattern(
+   color = NA,   # kein Balken-Rahmen
+   pattern_colour = NA,  # kein Muster-Rahmen
+    pattern_density = 0.3,
+    pattern_spacing = 0.05,
+    pattern_fill    = "white"
+  ) +
+  scale_fill_manual(values = c(
+    "Erneuerbar"  = "#009000",
+    "Kernenergie" = "#85fff9",
+    "Kohle"       = "#404040",
+    "Erdgas"      = "#F96C1B"
+  )) +
+  scale_pattern_manual(values = c(
+    "Bayern"       = "none",     # volle Farbe
+    "Deutschland"  = "circle"    # dot
+  )) +
+  facet_wrap(~Energietraeger, scales = "fixed") +
+  labs(title = "Energiemix 2024: Bayern vs. Deutschland",
+       x = "", y = "Anteil (%)") +
+  theme_minimal() +
+theme(legend.position = "none")
+```
+
+
+Um einen besseren Überblick zu erhalten, zeigen die folgenden Grafiken die Entwicklung der Anteile der wichtigsten Energieträger in Bayern und Deutschland von 2000 bis 2024.
+
+```{r Überblick}
+# Zeitreihe – mehrere Variablen gemeinsam (BY)
+ggplot(bayern_long, aes(x = Jahr, y = Anteil, color = Energietraeger)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 1.5) +
+  scale_color_manual(values = c(
+    "Erneuerbar"  = "#009000",  
+    "Kernenergie" = "#85fff9",  
+    "Kohle"       = "#404040",  
+    "Erdgas"      = "#F96C1B" 
   )) +
   labs(title = "Energiemix Bayern 2000-2024",
        x = "Jahr", y = "Anteil (%)") +
@@ -184,35 +404,21 @@ ggplot(bayern_long, aes(x = Jahr, y = Anteil, color = Energietraeger)) +
 
 
 # Zeitreihe – mehrere Variablen gemeinsam (DE)
-deutschland_long <- deutschland |>
-  select(Year, Coal, Gas, Nuclear, Anteil_Erneuerbar) |>
-  rename(Anteil_Kohlen = Coal,
-    Anteil_Erdgas      = Gas,
-    Anteil_Kernenergie = Nuclear,
-  ) |>
-  pivot_longer(-Year, names_to = "Energietraeger", values_to = "Anteil")
-
-ggplot(deutschland_long, aes(x = Year, y = Anteil, color = Energietraeger)) +
+ggplot(deutschland_long, aes(x = Jahr, y = Anteil, color = Energietraeger)) +
   geom_line(linewidth = 1) +
+  geom_point(size = 1.5) +
   scale_color_manual(values = c(
-    "Anteil_Erneuerbar"  = "#009000",  
-    "Anteil_Kernenergie" = "#85fff9",  
-    "Anteil_Kohlen"      = "#404040",  
-    "Anteil_Erdgas"      = "#F96C1B"
-    ),
-  labels = c(
-    "Anteil_Erneuerbar"  = "Erneuerbar",
-    "Anteil_Kernenergie" = "Kernenergie",
-    "Anteil_Kohlen"      = "Kohle",
-    "Anteil_Erdgas"      = "Erdgas"
-  )) +
+    "Erneuerbar"  = "#009000",  
+    "Kernenergie" = "#85fff9",  
+    "Kohle"       = "#404040",  
+    "Erdgas"      = "#F96C1B"
+    )) +
   labs(title = "Energiemix Deutschland 2000-2024",
        x = "Jahr", y = "Anteil (%)") +
   theme_minimal()
 ```
 
 Die Grafiken zeigen deutlich, dass sowohl in Bayern als auch in Deutschland der Anteil der Kernenergie im Zeitraum 2000–2024 auf 0% gesunken ist – in Deutschland von rund 30% und in Bayern sogar von rund 60%. Dieser Rückgang ist auf den deutschen Atomausstieg zurückzuführen, der 2023 abgeschlossen wurde. Gleichzeitig ist in beiden Regionen der Anteil erneuerbarer Energien stark gestiegen, was darauf hindeutet, dass die Kernenergie weitgehend durch erneuerbare Quellen ersetzt wurde. Auch der Anteil der Kohle ging in beiden Regionen zurück. Interessant ist dabei, dass der Anteil des Erdgases parallel zum Anstieg der erneuerbaren Energien ebenfalls zugenommen hat – Erdgas diente in dieser Übergangsphase vermutlich als Brückentechnologie, um Schwankungen bei der erneuerbaren Stromerzeugung auszugleichen.
-
 
 # 4. Ausreißeranalyse
 
@@ -223,17 +429,9 @@ bayern_box <- bayern_long |>
   mutate(Region = "Bayern")
 
 deutschland_box <- deutschland_long |>
-  rename(Jahr = Year) |>
   mutate(Region = "Deutschland")
 
 beide_box <- bind_rows(bayern_box, deutschland_box)
-
-beide_box <- beide_box |>
-  mutate(Energietraeger = recode(Energietraeger,
-    "Anteil_Erdgas"      = "Erdgas",
-    "Anteil_Erneuerbar"  = "Erneuerbar",
-    "Anteil_Kernenergie" = "Kernenergie",
-    "Anteil_Kohlen"      = "Kohle"))
 
 # Boxplot 
 ggplot(beide_box, aes(x = Energietraeger, y = Anteil, fill = Energietraeger)) +
@@ -298,7 +496,8 @@ alle_regionen <- bayern |>
 
 ```{r zeitreihen-Darstellung}
 ggplot(alle_regionen, aes(x = Jahr, y = Anteil_Erneuerbar, color = Region)) +
-  geom_line(linewidth = 1.1) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 1.5) +
   scale_color_manual(values = c(
     "Bayern"      = "#0098D4",
     "Deutschland" = "#000000",
@@ -314,6 +513,51 @@ Die folgende Grafik zeigt eine multivariate Zeitreihe des Anteils erneuerbarer E
 Alle Regionen weisen einen positiven Trend auf – der Anteil erneuerbarer Energien ist weltweit gestiegen. Bayern hat dabei seit 2000 kontinuierlich den höchsten Anteil – sowohl im Vergleich zu Deutschland als auch zur EU und dem Weltdurchschnitt. Im Jahr 2024 erreichte Bayern 75.5%, während Deutschland bei 58.6%, die EU bei ca. 42% und die Welt bei ca. 30% lagen.
 In den ersten Jahren (2000–2005) war der Anteil erneuerbarer Energien in Bayern nahezu konstant, während Deutschland in dieser Zeit bereits einen leichten Anstieg von ca. 6% auf 10% zeigte.
 Bemerkenswert ist ein Knick im Jahr 2021, der sowohl in Bayern als auch in Deutschland sichtbar ist. Dies ist vermutlich auf die Nachwirkungen der COVID-19-Pandemie zurückzuführen: Der wirtschaftliche Aufschwung nach dem Lockdown führte zu einem erhöhten Stromverbrauch, wodurch auch fossile Energieträger wie Kohle wieder stärker eingesetzt wurden und der relative Anteil erneuerbarer Energien für einen kurzen Zeitraum sank.
+
+
+### Anteil erneuerbarer Energien im regionalen Vergleich: 2004 vs. 2024
+
+Die folgende Grafik vergleicht den Anteil erneuerbarer Energien in Bayern, Deutschland, der EU und der Welt für die Jahre 2004 und 2024. Der 
+Startzeitpunkt 2004 wurde gewählt, da für die EU in den Jahren 2000–2003 keine Winddaten vorlagen (NA). Da die Berechnung des Gesamtanteils 
+erneuerbarer Energien die Windkomponente enthält, ergab die Summe ebenfalls NA — ein sinnvoller Vergleichswert für die EU wäre für diesen Zeitraum 
+nicht möglich gewesen.
+
+```{r Balken-diagramm-alle-regionen}
+vergleich_ee <- bind_rows(
+  bayern |> 
+    filter(Jahr %in% c(2004, 2024)) |>
+    select(Jahr, Anteil_Erneuerbar) |>
+    mutate(Region = "Bayern"),
+  
+  deutschland |> 
+    filter(Year %in% c(2004, 2024)) |>
+    select(Jahr = Year, Anteil_Erneuerbar) |>
+    mutate(Region = "Deutschland"),
+  
+  eu |> 
+    filter(Year %in% c(2004, 2024)) |>
+    select(Jahr = Year, Anteil_Erneuerbar) |>
+    mutate(Region = "EU"),
+  
+  welt |> 
+    filter(Year %in% c(2004, 2024)) |>
+    select(Jahr = Year, Anteil_Erneuerbar) |>
+    mutate(Region = "Welt")
+) |>
+  mutate(
+    Region = factor(Region, levels = c("Bayern", "Deutschland", "EU", "Welt")),
+    Jahr = factor(Jahr)
+  )
+
+ggplot(vergleich_ee, aes(x = Region, y = Anteil_Erneuerbar, fill = Jahr)) +
+  geom_col(position = "dodge", width = 0.7) +
+  scale_fill_manual(values = c("2004" = "#A8E6A1", "2024" = "#009000")) +
+  labs(title = "Anteil erneuerbarer Energien 2004 vs. 2024",
+       x = "", y = "Anteil (%)", fill = "Jahr") +
+  theme_minimal()
+```
+
+Die Grafik bestätigt die Hypothese: Bayern nimmt nicht nur gegenüber Deutschland, sondern auch im europäischen und globalen Kontext eine Vorreiterrolle ein. Während alle Regionen seit 2004 deutlich gewachsen sind, liegt Bayern 2024 als einzige Region über 70%.
 
 
 ###  Wachstumsgeschwindigkeit
