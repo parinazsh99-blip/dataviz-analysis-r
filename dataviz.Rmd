@@ -178,6 +178,8 @@ bayern_long_alle <- bayern |>
   ) |>
   pivot_longer(-Jahr, names_to = "Energietraeger", values_to = "Anteil")
 
+
+# Flächendiagramm
 ggplot(bayern_long_alle, aes(x = Jahr, y = Anteil, fill = Energietraeger)) +
   geom_area(alpha = 0.6) +
   scale_fill_manual(values = c(
@@ -212,6 +214,8 @@ deutschland_long_alle <- deutschland |>
   ) |>
   pivot_longer(-Jahr, names_to = "Energietraeger", values_to = "Anteil")
 
+
+# Flächendiagramm
 ggplot(deutschland_long_alle, aes(x = Jahr, y = Anteil, fill = Energietraeger)) +
   geom_area(alpha = 0.6) +
   scale_fill_manual(values = c(
@@ -288,7 +292,7 @@ ggplot(deutschland_long, aes(x = Jahr, y = Anteil, fill = Energietraeger)) +
 ```
 
 Wie die Gesamtübersicht bereits zeigt, haben erneuerbare Energien in beiden Regionen die Kernenergie nahezu vollständig ersetzt. Kohle ist ebenfalls 
-rückläufig — in Bayern war der Anteil bereits 2000 sehr gering und istheute vernachlässigbar. Erdgas hingegen ist leicht gestiegen, was darauf 
+rückläufig — in Bayern war der Anteil bereits 2000 sehr gering und ist heute vernachlässigbar. Erdgas hingegen ist leicht gestiegen, was darauf 
 hindeutet, dass es als schnell verfügbare Übergangslösung genutzt wurde, um die wegfallende Kernenergie kurzfristig auszugleichen, bis erneuerbare 
 Energien weiter ausgebaut werden konnten.
 
