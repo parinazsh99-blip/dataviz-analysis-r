@@ -1,4 +1,4 @@
-" # Datenaufbereitung und Visualisierung – Erneuerbare Energien in Bayern
+# Datenaufbereitung und Visualisierung – Erneuerbare Energien in Bayern
 
 Modularbeit im Fach *Datenaufbereitung und Visualisierung*, Hochschule München (Sommersemester 2026).
 
@@ -23,18 +23,17 @@ Alle Rohdaten liegen im Ordner [`data/`](./data).
 
 ## Projektstruktur
 
+```
 ├── data/ # verwendete Rohdatensätze (CSV, XLSX)
-
 ├── dataviz.Rmd # R-Markdown-Analyse (Datenaufbereitung, Exploration, Visualisierung)
-
 ├── dataviz.html # kompilierter Report (Ergebnis von dataviz.Rmd)
-
 └── README.md
+```
 
 ## Verwendete Tools
 
 - **R** mit [R Markdown](https://rmarkdown.rstudio.com/)
-- Pakete aus dem [Tidyverse](https://www.tidyverse.org/): `ggplot2`, `dplyr`, `tidyr`, `readr`, `readxl`, `stringr`, `forcats`, `lubridate`, `purrr`, `scales` "
+- Pakete aus dem [Tidyverse](https://www.tidyverse.org/): `ggplot2`, `dplyr`, `tidyr`, `readr`, `readxl`, `stringr`, `forcats`, `lubridate`, `purrr`, `scales` 
 
 ## Report ansehen
 
